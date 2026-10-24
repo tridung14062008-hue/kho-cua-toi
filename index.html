@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tính tồn hàng ngày - COS</title>
+<style>
+:root{--bg:#faf8f5;--card:#fff;--tx:#1f1a17;--mut:#7a6f66;--bd:#e6dfd6;--ac:#c2410c;--ac2:#fff3ea;--ok:#15803d;--bad:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171412;--card:#221e1b;--tx:#f3ece5;--mut:#a39889;--bd:#3a332d;--ac:#fb923c;--ac2:#2e2118;--ok:#4ade80;--bad:#f87171}}
+:root[data-theme="dark"]{--bg:#171412;--card:#221e1b;--tx:#f3ece5;--mut:#a39889;--bd:#3a332d;--ac:#fb923c;--ac2:#2e2118;--ok:#4ade80;--bad:#f87171}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;padding:14px}
+.w{max-width:980px;margin:0 auto}
+h1{font-size:20px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin-bottom:12px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:12px;margin-bottom:12px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+label{font-size:13px;color:var(--mut)}
+input{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:6px 8px;width:100%}
+input:focus{outline:2px solid var(--ac);outline-offset:-1px}
+button{font:inherit;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:8px;padding:8px 12px;cursor:pointer}
+button.p{background:var(--ac);color:#fff;border-color:var(--ac)}
+button:disabled{opacity:.5}
+.formula{background:var(--ac2);border-radius:8px;padding:8px 10px;font-size:13px}
+.sc{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:700px}
+th,td{padding:5px 6px;border-bottom:1px solid var(--bd);text-align:right;white-space:nowrap}
+th{font-size:12px;color:var(--mut);font-weight:600;position:sticky;top:0;background:var(--card)}
+th:first-child,td:first-child{text-align:left;white-space:normal;min-width:130px;font-weight:500}
+td input{width:84px;text-align:right;padding:5px 6px}
+td input.h{width:62px}
+.res{font-weight:700;color:var(--ac)}
+tfoot td{font-weight:700;border-top:2px solid var(--bd)}
+.neg{color:var(--bad)}
+#ai{white-space:pre-wrap;font-size:14px}
+.note{font-size:12px;color:var(--mut)}
+</style>
+</head>
+<body>
+<div class="w">
+<h1>Tính tồn hàng ngày (COS)</h1>
+<div class="sub">Nhập số liệu, bảng tự tính. Đơn vị: kg.</div>
+
+<div class="card">
+<div class="formula"><b>Tồn kho hôm nay</b> = (Tồn kho hôm qua − Xuất hôm qua) × (1 − Hao hụt %). Số này mang sang ngày mai.<br><b>Tồn nhà hàng</b> = Tồn kho hôm nay + Thịt ngoài (chỉ để xem, không mang sang ngày mai).</div>
+<div class="row" style="margin-top:10px">
+<div style="flex:1;min-width:140px"><label for="d">Ngày</label><input id="d" type="date"></div>
+<div style="flex:1;min-width:140px"><label for="hh">Hao hụt chung (%)</label><input id="hh" type="number" step="0.1" min="0" value="1"></div>
+<button id="ap">Áp dụng cho tất cả</button>
+</div>
+</div>
+
+<div class="card sc">
+<table>
+<thead><tr><th>Sản phẩm</th><th>Tồn kho hôm qua</th><th>Xuất hôm qua</th><th>Hao hụt %</th><th>Tồn kho hôm nay</th><th>Thịt ngoài</th><th>Tồn nhà hàng</th></tr></thead>
+<tbody id="tb"></tbody>
+<tfoot><tr><td>Tổng</td><td id="t1"></td><td id="t2"></td><td></td><td id="t4"></td><td id="t5"></td><td id="t6"></td></tr></tfoot>
+</table>
+</div>
+
+<div class="card">
+<div class="row">
+<button class="p" id="chot">Chốt ngày: chuyển tồn kho hôm nay sang ngày mai</button>
+<button class="p" id="img">Xuất ảnh</button><button id="csv">Tải CSV</button>
+<button id="rs">Xóa hết số liệu</button>
+</div>
+<div class="note" style="margin-top6px">Dữ liệu lưu trên trình duyệt của bạn.</div>
+</div>
+
+<div class="card">
+<div class="row"><b>Xem lại số liệu ngày trước</b></div>
+<div class="row" style="margin-top:8px"><select id="hs" style="font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:8px;padding:7px 8px"></select><button id="himg">Xuất ảnh ngày này</button></div>
+<div id="hv" style="margin-top:8px"></div>
+</div>
+
+<div class="card">
+<div class="row"><button class="p" id="bai" style="display:none">Phân tích bằng AI</button><span class="note" id="an">AI đọc bảng, báo sản phẩm bất thường và gợi ý mức hao hụt.</span></div>
+<div id="ai" style="margin-top:8px"></div>
+</div>
+</div>
+
+<script>
+var P=["Rẻ sườn tươi","Rẻ sườn hoàng đế","Sườn la chill","Lõi vai chill","Gù chill","Ba chỉ heo","Má heo","Diềm cơ bụng","Rẻ sườn gabi","Bẹ","Lõi vai gabi","Nạc vai heo gabi","Gà","Sườn la gabi","Sườn heo gabi","Sườn heo tươi","Ba chỉ heo tảng","Ba chỉ bò tảng","Gù bò tảng","Sườn 20","Sườn 14","Sườn 7","Sườn 5","Hảo hạng","Nạc vai heo ALC","Nạc vai heo tảng","Thăn cổ","Bạch tuộc","Tôm"];
+var K="tonkho_v2",S={date:"",rows:P.map(function(){return{g:"",x:"",h:1,o:""}})};
+try{var s=JSON.parse(localStorage.getItem(K)||"null");if(s&&s.rows&&s.rows.length===P.length)S=s}catch(e){}
+if(!S.date)S.date=new Date().toISOString().slice(0,10);
+if(!S.hist)S.hist={};
+function sv(){try{S.hist[S.date]=JSON.parse(JSON.stringify(S.rows));localStorage.setItem(K,JSON.stringify(S))}catch(e){}if(document.getElementById("hs"))rh()}
+function n(v){var x=parseFloat(v);return isNaN(x)?0:x}
+function f(v){return (Math.round(v*100)/100).toLocaleString("vi-VN")}
+var tb=document.getElementById("tb");
+P.forEach(function(p,i){
+var tr=document.createElement("tr");
+tr.innerHTML='<td>'+p+'</td>'+
+['g','x','h','o'].map(function(k,j){return j==3?'':''}).join('')+
+'<td><input data-i="'+i+'" data-k="g" type="number" step="0.01" inputmode="decimal"></td>'+
+'<td><input data-i="'+i+'" data-k="x" type="number" step="0.01" inputmode="decimal"></td>'+
+'<td><input class="h" data-i="'+i+'" data-k="h" type="number" step="0.1" inputmode="decimal"></td>'+
+'<td id="c'+i+'">0</td>'+
+'<td><input data-i="'+i+'" data-k="o" type="number" step="0.01" inputmode="decimal"></td>'+
+'<td class="res" id="r'+i+'">0</td>';
+tb.appendChild(tr)});
+function fill(){
+document.getElementById("d").value=S.date;
+tb.querySelectorAll("input").forEach(function(e){e.value=S.rows[e.dataset.i][e.dataset.k]});
+calc()}
+function calc(){
+var a=0,b=0,c=0,d=0,e=0;
+S.rows.forEach(function(r,i){
+var kho=(n(r.g)-n(r.x))*(1-n(r.h)/100),today=kho+n(r.o);
+a+=n(r.g);b+=n(r.x);c+=kho;d+=n(r.o);e+=today;
+var ck=document.getElementById("c"+i),rr=document.getElementById("r"+i);
+ck.textContent=f(kho);rr.textContent=f(today);
+ck.className="res"+(kho<0?" neg":"");rr.className=today<0?"neg":""});
+["t1","t2","t4","t5","t6"].forEach(function(id,i){document.getElementById(id).textContent=f([a,b,c,d,e][i])})}
+tb.addEventListener("input",function(ev){var t=ev.target;if(!t.dataset.i)return;S.rows[t.dataset.i][t.dataset.k]=t.value;sv();calc()});
+document.getElementById("d").addEventListener("change",function(e){S.date=e.target.value;sv()});
+document.getElementById("ap").onclick=function(){var v=document.getElementById("hh").value;S.rows.forEach(function(r){r.h=v});sv();fill()};
+document.getElementById("chot").onclick=function(){
+if(!confirm("Chốt ngày? Tồn kho hôm nay sẽ thành tồn kho hôm qua của ngày mai; xóa số xuất và thịt ngoài."))return;
+S.hist[S.date]=JSON.parse(JSON.stringify(S.rows));
+S.rows.forEach(function(r){var t=(n(r.g)-n(r.x))*(1-n(r.h)/100);r.g=Math.round(t*100)/100;r.x="";r.o=""});
+var d=new Date(S.date);d.setDate(d.getDate()+1);S.date=d.toISOString().slice(0,10);sv();fill()};
+document.getElementById("rs").onclick=function(){if(!confirm("Xóa hết số liệu, kể cả lịch sử các ngày?"))return;S.rows=P.map(function(){return{g:"",x:"",h:1,o:""}});S.hist={};sv();fill()};
+function csv(){var L=["San pham,Ton kho hom qua,Xuat hom qua,Hao hut %,Ton kho hom nay,Thit ngoai,Ton nha hang"];
+S.rows.forEach(function(r,i){var k=(n(r.g)-n(r.x))*(1-n(r.h)/100);L.push([P[i],n(r.g),n(r.x),n(r.h),Math.round(k*100)/100,n(r.o),Math.round((k+n(r.o))*100)/100].join(","))});return "\ufeff"+L.join("\n")}
+document.getElementById("csv").onclick=async function(){
+try{var dl=await claude.use("downloads");if(dl){await dl.save({filename:"ton-kho-"+S.date+".csv",data:csv()});return}}catch(e){if(e&&e.code==="declined")return}
+var w=window.open("","_blank");if(!w){alert("Không tải được file trên trình duyệt này.")}else{w.document.write("<pre>"+csv()+"</pre>")}};
+async function expImg(src){
+var rows=src.rows.map(function(r,i){var k=(n(r.g)-n(r.x))*(1-n(r.h)/100);return[P[i],n(r.g),n(r.x),n(r.h),k,n(r.o),k+n(r.o)]});
+var tot=[0,0,0,0,0,0,0];rows.forEach(function(r){[1,2,4,5,6].forEach(function(j){tot[j]+=r[j]})});
+var H=["Sản phẩm","Tồn kho hôm qua","Xuất hôm qua","Hao hụt %","Tồn kho hôm nay","Thịt ngoài","Tồn nhà hàng"];
+var W=[250,150,130,110,160,130,150],pad=24,rh=34,top=96,tw=W.reduce(function(a,b){return a+b},0);
+var cw=tw+pad*2,ch=top+rh*(rows.length+2)+pad,sc=2;
+var cv=document.createElement("canvas");cv.width=cw*sc;cv.height=ch*sc;
+var c=cv.getContext("2d");c.scale(sc,sc);
+c.fillStyle="#fff";c.fillRect(0,0,cw,ch);
+var ff="system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif";
+c.textBaseline="middle";c.textAlign="left";c.fillStyle="#1f1a17";c.font="bold 24px "+ff;
+c.fillText("Báo cáo tồn hàng ngày",pad,34);
+c.font="15px "+ff;c.fillStyle="#7a6f66";c.fillText("Ngày "+src.date.split("-").reverse().join("/")+" · đơn vị: kg",pad,62);
+function row(y,cells,o){
+if(o.bg){c.fillStyle=o.bg;c.fillRect(pad,y,tw,rh)}
+var x=pad;
+cells.forEach(function(v,j){
+c.font=(o.bold||j==4?"bold ":"")+"15px "+ff;
+c.fillStyle=o.color||(j==4?"#c2410c":"#1f1a17");
+if(j==0){c.textAlign="left";c.fillText(v,x+8,y+rh/2)}else{c.textAlign="right";c.fillText(v,x+W[j]-10,y+rh/2)}
+x+=W[j]});
+c.fillStyle="#e6dfd6";c.fillRect(pad,y+rh-1,tw,1)}
+row(top,H,{bg:"#c2410c",color:"#fff",bold:true});
+rows.forEach(function(r,i){row(top+rh*(i+1),[r[0],f(r[1]),f(r[2]),f(r[3]),f(r[4]),f(r[5]),f(r[6])],{bg:i%2?"#faf8f5":"#fff"})});
+row(top+rh*(rows.length+1),["Tổng",f(tot[1]),f(tot[2]),"",f(tot[4]),f(tot[5]),f(tot[6])],{bg:"#fff3ea",bold:true});
+var dl=null;try{if(typeof claude!=="undefined")dl=await claude.use("downloads")}catch(e){}
+cv.toBlob(async function(b){
+var fn="ton-kho-"+src.date+".png";
+if(dl){try{await dl.save({filename:fn,data:b})}catch(e){}}
+else{var a=document.createElement("a");a.href=URL.createObjectURL(b);a.download=fn;document.body.appendChild(a);a.click();a.remove()}
+},"image/png")}
+document.getElementById("img").onclick=function(){expImg(S)};
+function hcalc(r){var k=(n(r.g)-n(r.x))*(1-n(r.h)/100);return[k,k+n(r.o)]}
+function dts(){return Object.keys(S.hist).filter(function(d){return d<S.date&&S.hist[d].some(function(r){return n(r.g)||n(r.x)||n(r.o)})}).sort().reverse()}
+function rh(){
+var hs=document.getElementById("hs"),cur=hs.value,ds=dts();
+hs.innerHTML=ds.length?ds.map(function(d){return'<option value="'+d+'">'+d.split("-").reverse().join("/")+'</option>'}).join(""):'<option value="">Chưa có ngày nào</option>';
+if(ds.indexOf(cur)>=0)hs.value=cur;
+showH()}
+function showH(){
+var d=document.getElementById("hs").value,box=document.getElementById("hv"),b=document.getElementById("himg");
+if(!d||!S.hist[d]){box.innerHTML="";b.style.display="none";return}
+b.style.display="";
+var t=[0,0,0,0,0],h='<div class="sc"><table><thead><tr><th>Sản phẩm</th><th>Tồn kho hôm qua</th><th>Xuất hôm qua</th><th>Hao hụt %</th><th>Tồn kho hôm nay</th><th>Thịt ngoài</th><th>Tồn nhà hàng</th></tr></thead><tbody>';
+S.hist[d].forEach(function(r,i){
+if(!(n(r.g)||n(r.x)||n(r.o)))return;
+var c=hcalc(r);t[0]+=n(r.g);t[1]+=n(r.x);t[2]+=c[0];t[3]+=n(r.o);t[4]+=c[1];
+h+='<tr><td>'+P[i]+'</td><td>'+f(n(r.g))+'</td><td>'+f(n(r.x))+'</td><td>'+f(n(r.h))+'</td><td class="res">'+f(c[0])+'</td><td>'+f(n(r.o))+'</td><td>'+f(c[1])+'</td></tr>'});
+h+='</tbody><tfoot><tr><td>Tổng</td><td>'+f(t[0])+'</td><td>'+f(t[1])+'</td><td></td><td>'+f(t[2])+'</td><td>'+f(t[3])+'</td><td>'+f(t[4])+'</td></tr></tfoot></table></div>';
+box.innerHTML=h}
+document.getElementById("hs").onchange=showH;
+document.getElementById("himg").onclick=function(){var d=document.getElementById("hs").value;if(d&&S.hist[d])expImg({date:d,rows:S.hist[d]})};
+var smp=null;
+(typeof claude!=="undefined"?claude.use("sample"):Promise.resolve(null)).then(function(x){if(x){smp=x;document.getElementById("bai").style.display=""}}).catch(function(){});
+document.getElementById("bai").onclick=async function(){
+var btn=this,out=document.getElementById("ai");
+var data=S.rows.map(function(r,i){var k=(n(r.g)-n(r.x))*(1-n(r.h)/100);return{ten:P[i],ton_goc:n(r.g),xuat:n(r.x),hao_hut_pct:n(r.h),ton_kho_con:+k.toFixed(2),thit_ngoai:n(r.o),ton_hom_nay:+(k+n(r.o)).toFixed(2)}});
+btn.disabled=true;out.textContent="Đang phân tích...";
+try{
+var r=await smp("Bạn là trợ lý kiểm soát hàng tồn cho nhà hàng nướng/lẩu ở Việt Nam. Đơn vị kg, ngày "+S.date+". Công thức: tồn kho còn=(tồn gốc-xuất)*(1-hao hụt%), tồn hôm nay=tồn kho còn+thịt ngoài. Dữ liệu JSON: "+JSON.stringify(data)+"\nTrả lời tiếng Việt, ngắn gọn, 3 phần: (1) Sản phẩm bất thường (âm, xuất lớn hơn tồn, thịt ngoài lệch nhiều) (2) Gợi ý mức hao hụt % hợp lý cho nhóm hàng (thịt tươi, thịt chill/đông, hải sản như tôm, bạch tuộc) (3) Sản phẩm sắp hết cần nhập. Bỏ qua dòng toàn số 0. Không dùng markdown.",{modelTier:"quick",cache:false,onText:function(x){out.textContent=x.text}});
+out.textContent=r.text}
+catch(e){out.textContent=e&&e.code==="rate_limited"?"Bị giới hạn lượt, thử lại sau ít phút.":"Không chạy được AI lúc này."}
+btn.disabled=false};
+fill();rh();
+</script>
+</body>
+</html>
